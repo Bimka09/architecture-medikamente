@@ -1,0 +1,27 @@
+@startgantt
+
+Title План миграции, понедельный (Branch by abstraction)
+printscale weekly
+
+' --- Подготовка ---
+[Анализ доменов]        as [a1] requires 14 days
+[Создание абстракций]   as [a2] starts at [a1]'s end and requires 21 days
+[IAM]                   as [a3] starts at [a2]'s end and requires 14 days
+
+' --- Миграция ---
+[Пациенты]              as [b1] starts at [a3]'s end and requires 21 days
+[Запись на приём]       as [b2] starts at [b1]'s end and requires 28 days
+[Интеграция с 1С]       as [b3] starts at [a3]'s end and requires 21 days
+[Платёжный шлюз ]       as [b4] starts at [b3]'s end and requires 14 days
+[CRM и ресепшен ]       as [b5] starts at [b2]'s end and requires 21 days
+
+' --- Дополнительно ---
+[Лаборатория]           as [c1] starts at [b2]'s end and requires 21 days
+[Озеро данных]          as [c2] starts at [b3]'s end and requires 28 days
+[Мобильное приложение]  as [c3] starts at [b5]'s end and requires 35 days
+[Аудит и мониторинг]    as [c4] starts at [c3]'s end and requires 14 days
+
+' --- Cutover ---
+[Отключение старых систем] as [d1] starts at [c4]'s end and requires 14 days
+
+@endgantt
