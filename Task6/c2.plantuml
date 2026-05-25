@@ -1,0 +1,95 @@
+@startuml
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam defaultTextAlignment center
+
+title Data Classification Engine Architecture
+
+package "Data Sources" {
+    [Excel] as source1
+    [1C] as source2
+    [CRM] as source3
+    [API] as source4
+}
+
+[Агрегация источников данных \n(ETL/ELT)] as aggregator
+
+package "Landing Zone" {
+    [Хранилище \nсырых данных] as landing_zone
+    note right of landing_zone
+      Формат: Parquet/ORC
+      Метаданные: schema, source, timestamp
+      Шифрование: AES-256
+    end note
+}
+
+package "Data Classification Engine" {
+    [Schema Discovery &\nInference\n(Spark + Deequ)] as schema_inference
+    [Pattern Matching\n(регулярные выражения, словари)] as pattern_matcher
+    [NLP + ML Classifier\n(BERT-based NER)] as ner_model
+    [Metadata Enricher\n(Тэги: PII, PHI, и т.п.)] as metadata_enricher
+    [Policy Engine\n(применение правил)] as policy_engine
+    [Anonymization Gateway\n(маскирование, псевдонимизация и т.п.)] as anonymizer
+
+note left of policy_engine
+  если PII или PHI,
+  то переходим в Silver,
+  иначе в Gold
+end note
+
+note left of anonymizer
+  Например:
+  - name → XXX XXX
+  - age → 30-40
+  - phone → masked
+end note
+
+}
+
+package "Data Lake" {
+    [Бронзовый уровень\nСырые данные + тэги] as bronze
+    [Серебряный уровень\nОчищенные данные + чувствительные данные] as silver
+    [Золотой уровень\nАгрегированные данные + Анонимизованные данные] as gold
+}
+
+package "Security & Governance" {
+    [Политики RBAC/ABAC] as rbac
+    [Логи аудита\n(ELK / VictoriaMetrics)] as audit
+    [Каталог данных\n(Apache Atlas)] as catalog
+    [Шифрование\n(TLS 1.3, KMS)] as encryption
+}
+
+' --- Connections ---
+
+source1 --> aggregator
+source2 --> aggregator
+source3 --> aggregator
+source4 --> aggregator
+
+aggregator --> landing_zone : Raw batch
+
+landing_zone --> schema_inference
+landing_zone --> pattern_matcher
+landing_zone --> ner_model
+
+schema_inference --> metadata_enricher
+pattern_matcher --> metadata_enricher
+ner_model --> metadata_enricher
+
+metadata_enricher --> policy_engine
+
+policy_engine --> bronze
+policy_engine --> anonymizer : Требует \nанонимизации
+
+anonymizer -right-> silver : если обнаружена \nчувствительная \nинформация
+silver --> policy_engine : Перепроверка перед \nразмещением \nв золотой уровень
+anonymizer --> gold
+
+bronze --> silver
+silver --> gold
+
+' --- Governance links ---
+"Data Lake" --> "Security & Governance"
+metadata_enricher ----down-> catalog : тэгирование
+
+@enduml
